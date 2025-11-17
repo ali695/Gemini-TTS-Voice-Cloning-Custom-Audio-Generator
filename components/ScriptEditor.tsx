@@ -7,6 +7,7 @@ import { PlayIcon } from './icons/PlayIcon';
 import { PauseIcon } from './icons/PauseIcon';
 import { StopIcon } from './icons/StopIcon';
 import { DownloadIcon } from './icons/DownloadIcon';
+import { ChevronDownIcon } from './icons/ChevronDownIcon';
 
 interface ScriptEditorProps {
     profile: VoiceProfile;
@@ -22,6 +23,7 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({ profile, addLog, gen
     const [isPlaying, setIsPlaying] = useState(false);
     const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
     const [exportFormat, setExportFormat] = useState<ExportFormat>('wav');
+    const [isLogOpen, setIsLogOpen] = useState(false);
     
     const audioContextRef = useRef<AudioContext | null>(null);
     const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
@@ -57,6 +59,7 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({ profile, addLog, gen
         setIsPlaying(false);
         setAudioBuffer(null);
         addLog(`Generating audio for "${profile.name}"...`);
+        setIsLogOpen(true);
 
         try {
             const base64Audio = await generateSpeech(script, profile);
@@ -119,6 +122,7 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({ profile, addLog, gen
         }
 
         addLog(`Preparing download for ${exportFormat.toUpperCase()} format...`);
+        setIsLogOpen(true);
 
         let blob: Blob;
         const mimeType = exportFormat === 'mp3' ? 'audio/mpeg' : `audio/${exportFormat}`;
@@ -220,13 +224,21 @@ export const ScriptEditor: React.FC<ScriptEditorProps> = ({ profile, addLog, gen
                 {isGenerating ? 'Generating...' : 'Generate Audio'}
             </button>
             
-            <div className="flex-grow bg-slate-200/50 dark:bg-slate-900/50 rounded-lg p-3 overflow-hidden flex flex-col">
-                <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2 px-1 flex-shrink-0">Generation Log</h3>
-                <div ref={logContainerRef} className="flex-grow overflow-y-auto space-y-1.5 text-xs text-slate-500 dark:text-slate-400 font-mono pr-1">
-                    {generationLog.map((log, index) => (
-                        <p key={index} className="whitespace-pre-wrap break-words leading-relaxed">{log}</p>
-                    ))}
-                </div>
+            <div className="flex-grow bg-slate-200/50 dark:bg-slate-900/50 rounded-lg overflow-hidden flex flex-col">
+                <button
+                    onClick={() => setIsLogOpen(prev => !prev)}
+                    className="w-full flex justify-between items-center text-left p-3 flex-shrink-0"
+                >
+                    <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300">Generation Log</h3>
+                    <ChevronDownIcon className={`w-5 h-5 text-slate-500 transition-transform duration-300 ${isLogOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isLogOpen && (
+                    <div ref={logContainerRef} className="flex-grow overflow-y-auto space-y-1.5 text-xs text-slate-500 dark:text-slate-400 font-mono pr-1 px-3 pb-3 animate-fade-in">
+                        {generationLog.map((log, index) => (
+                            <p key={index} className="whitespace-pre-wrap break-words leading-relaxed">{log}</p>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -4,6 +4,7 @@ import { VoiceBuilder } from './components/VoiceBuilder';
 import { VoiceSettings } from './components/VoiceSettings';
 import { ScriptEditor } from './components/ScriptEditor';
 import { VoiceLibrary } from './components/VoiceLibrary';
+import { defaultVoiceProfiles } from './data/voiceProfiles';
 import type { VoiceProfile, VoiceSettings as VoiceSettingsType } from './types';
 
 type Theme = 'light' | 'dark';
@@ -31,33 +32,16 @@ const App: React.FC = () => {
         setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
     };
 
-    const [voiceProfiles, setVoiceProfiles] = useState<VoiceProfile[]>([
-        {
-            id: 'vp_1',
-            name: 'Documentary Narrator',
-            description: 'A clear, deep male voice with a calm and authoritative tone, perfect for documentary narration.',
-            settings: {
-                language: 'EN',
-                speed: 1.0,
-                pitch: 1.0,
-                temperature: 0.7,
-                emotionalDepth: 0.8,
-                clarity: 0.9,
-                breathingLevel: 0.2,
-                stability: 0.8,
-                accent: 'American',
-            },
-            vibe: 'Documentary',
-        }
-    ]);
-    const [activeProfileId, setActiveProfileId] = useState<string>('vp_1');
+    const [voiceProfiles, setVoiceProfiles] = useState<VoiceProfile[]>(defaultVoiceProfiles);
+    const [activeProfileId, setActiveProfileId] = useState<string>(defaultVoiceProfiles[0]?.id || '');
     const [generationLog, setGenerationLog] = useState<string[]>(['[System] Welcome to VoiceGen Studio.']);
+    const [customFolders, setCustomFolders] = useState<string[]>([]);
 
     const activeProfile = voiceProfiles.find(p => p.id === activeProfileId);
 
-    const addLog = (message: string) => {
+    const addLog = useCallback((message: string) => {
         setGenerationLog(prev => [`[${new Date().toLocaleTimeString()}] ${message}`, ...prev].slice(0, 100));
-    };
+    }, []);
 
     const handleUpdateProfile = useCallback((id: string, updates: Partial<VoiceProfile>) => {
         setVoiceProfiles(prevProfiles =>
@@ -73,12 +57,35 @@ const App: React.FC = () => {
         );
     }, []);
 
+    const handleCreateFolder = useCallback((folderName: string): boolean => {
+        const trimmedName = folderName.trim();
+        if (trimmedName === '') {
+            addLog('Error: Folder name cannot be empty.');
+            return false;
+        }
+
+        const allCategoryNames = new Set([
+            ...customFolders.map(f => f.toLowerCase()),
+            ...voiceProfiles.map(p => p.category?.toLowerCase()).filter(Boolean)
+        ]);
+        
+        if (allCategoryNames.has(trimmedName.toLowerCase())) {
+            addLog(`Error: Folder "${trimmedName}" already exists.`);
+            return false;
+        }
+    
+        setCustomFolders(prev => [...prev, trimmedName]);
+        addLog(`Created new folder: ${trimmedName}`);
+        return true;
+    }, [voiceProfiles, customFolders, addLog]);
+
     const handleCreateNewProfile = useCallback(() => {
         const newId = `vp_${Date.now()}`;
         const newProfile: VoiceProfile = {
             id: newId,
-            name: `New Voice ${voiceProfiles.length + 1}`,
+            name: `New Voice ${voiceProfiles.filter(p => p.category === 'My Voices').length + 1}`,
             description: 'A new custom voice, ready for your creative touch.',
+            category: 'My Voices',
             settings: {
                 language: 'EN',
                 speed: 1.0,
@@ -95,17 +102,26 @@ const App: React.FC = () => {
         setVoiceProfiles(prev => [...prev, newProfile]);
         setActiveProfileId(newId);
         addLog(`Created new voice profile: ${newProfile.name}`);
-    }, [voiceProfiles.length]);
+    }, [voiceProfiles, addLog]);
 
     const handleDeleteProfile = useCallback((id: string) => {
-        const profileToDelete = voiceProfiles.find(p => p.id === id);
-        setVoiceProfiles(prev => prev.filter(p => p.id !== id));
-        if (activeProfileId === id) {
-             const remainingProfiles = voiceProfiles.filter(p=>p.id !== id);
-             setActiveProfileId(remainingProfiles.length > 0 ? remainingProfiles[0].id : '');
-        }
-        addLog(`Deleted voice profile: ${profileToDelete?.name}`);
-    }, [activeProfileId, voiceProfiles]);
+        setVoiceProfiles(prevProfiles => {
+            const profileToDelete = prevProfiles.find(p => p.id === id);
+            if (!profileToDelete) {
+                return prevProfiles; 
+            }
+            
+            addLog(`Deleted voice profile: ${profileToDelete.name}`);
+            
+            const remainingProfiles = prevProfiles.filter(p => p.id !== id);
+            
+            if (activeProfileId === id) {
+                setActiveProfileId(remainingProfiles.length > 0 ? remainingProfiles[0].id : '');
+            }
+            
+            return remainingProfiles;
+        });
+    }, [activeProfileId, addLog]);
 
     return (
         <div className="min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 flex flex-col transition-colors duration-300">
@@ -115,8 +131,10 @@ const App: React.FC = () => {
                     <VoiceLibrary
                         profiles={voiceProfiles}
                         activeProfileId={activeProfileId}
+                        customFolders={customFolders}
                         onSelectProfile={setActiveProfileId}
                         onCreateProfile={handleCreateNewProfile}
+                        onCreateFolder={handleCreateFolder}
                         onDeleteProfile={handleDeleteProfile}
                         onUpdateProfile={handleUpdateProfile}
                     />

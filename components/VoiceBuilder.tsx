@@ -9,7 +9,8 @@ interface VoiceBuilderProps {
 
 const VIBES: Vibe[] = [
     'Dramatic', 'Friendly', 'Sincere', 'Pirate', 'Smooth Jazz DJ', 'Whispering', 
-    'Emotional', 'Documentary', 'Motivational', 'Villain', 'News Anchor', 'Calm Therapist', 'Soft ASMR'
+    'Emotional', 'Documentary', 'Motivational', 'Villain', 'News Anchor', 'Calm Therapist', 'Soft ASMR',
+    'Horror Narrator', 'Fairytale Teller', 'Action Narrator', 'Bedtime Story'
 ];
 
 const UploadIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -26,9 +27,10 @@ export const VoiceBuilder: React.FC<VoiceBuilderProps> = ({ profile, onUpdate, a
         onUpdate(profile.id, { description: e.target.value });
     };
 
-    const handleVibeClick = (vibe: Vibe) => {
-        onUpdate(profile.id, { vibe });
-        addLog(`Vibe set to: ${vibe}`);
+    const handleVibeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newVibe = e.target.value as Vibe;
+        onUpdate(profile.id, { vibe: newVibe });
+        addLog(`Vibe set to: ${newVibe}`);
     };
     
     const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,22 +60,16 @@ export const VoiceBuilder: React.FC<VoiceBuilderProps> = ({ profile, onUpdate, a
             </div>
 
             <div>
-                <h3 className="text-md font-semibold text-slate-800 dark:text-slate-200 mb-3">Personality & Vibe</h3>
-                <div className="flex flex-wrap gap-2">
+                <h3 className="text-md font-semibold text-slate-800 dark:text-slate-200 mb-2">Personality & Vibe</h3>
+                <select 
+                    value={profile.vibe} 
+                    onChange={handleVibeChange}
+                    className="w-full bg-slate-100 dark:bg-slate-700/50 rounded-lg border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-100 dark:focus:ring-offset-slate-900 focus:ring-sky-500 focus:border-transparent transition text-slate-800 dark:text-slate-200 p-2.5"
+                >
                     {VIBES.map(vibe => (
-                        <button
-                            key={vibe}
-                            onClick={() => handleVibeClick(vibe)}
-                            className={`px-3 py-1.5 text-sm rounded-full transition-all duration-200 border ${
-                                profile.vibe === vibe 
-                                ? 'bg-gradient-to-r from-teal-400 to-sky-500 border-transparent text-white font-semibold shadow-md shadow-sky-500/10' 
-                                : 'bg-slate-200 dark:bg-slate-700/50 border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-500 hover:bg-slate-300/50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
-                            }`}
-                        >
-                            {vibe}
-                        </button>
+                        <option key={vibe} value={vibe}>{vibe}</option>
                     ))}
-                </div>
+                </select>
             </div>
 
             <div>
