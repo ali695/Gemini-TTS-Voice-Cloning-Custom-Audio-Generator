@@ -71,11 +71,12 @@ const VoiceItem: React.FC<{
         setIsEditing(false);
     };
 
-    const combinedClassName = `p-3 rounded-xl cursor-pointer transition-all duration-200 group relative border
+    const combinedClassName = `px-4 py-3 rounded-lg cursor-pointer transition-all duration-200 group relative border
         ${isActive 
-            ? 'bg-blue-500/10 dark:bg-slate-700/50 border-blue-500/30 dark:border-[var(--neon-blue)] shadow-md dark:shadow-lg dark:shadow-black/20' 
-            : 'bg-slate-500/5 dark:bg-black/20 border-transparent hover:bg-slate-500/10 dark:hover:bg-black/40'
-        } ${isDragged ? 'opacity-30' : 'opacity-100'} ${isDropTarget ? 'outline outline-2 outline-offset-2 outline-blue-500 dark:outline-[var(--neon-cyan)]' : ''}`;
+            ? 'bg-white dark:bg-slate-800 border-blue-500 dark:border-cyan-400 shadow-md ring-1 ring-blue-500/20 dark:ring-cyan-400/20 z-10' 
+            : 'border-transparent hover:bg-slate-50 dark:hover:bg-white/5'
+        } ${isDragged ? 'opacity-30 scale-95' : 'opacity-100'} 
+          ${isDropTarget ? 'border-t-2 border-t-blue-500 dark:border-t-cyan-400 pt-3' : ''}`;
 
     return (
         <div 
@@ -87,26 +88,28 @@ const VoiceItem: React.FC<{
             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect()}
             {...dragAndDropProps}
         >
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between items-center min-w-0">
                 {isEditing ? (
                     <input
                         type="text" value={name} onChange={(e) => setName(e.target.value)} onBlur={handleSave}
                         onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-                        className="bg-white dark:bg-slate-950 text-slate-900 dark:text-white w-full text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-[var(--neon-cyan)] rounded px-2 py-1 -m-2"
+                        className="bg-white dark:bg-black text-slate-900 dark:text-white w-full text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 -ml-2"
                         autoFocus onClick={e => e.stopPropagation()}
                         aria-label={`Rename voice profile ${profile.name}`}
                     />
                 ) : (
-                    <h3 className="text-sm font-semibold tracking-tight text-slate-800 dark:text-slate-100 truncate pr-16" onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
+                    <h3 className={`text-sm font-semibold truncate pr-8 ${isActive ? 'text-blue-700 dark:text-cyan-100' : 'text-slate-700 dark:text-slate-300'}`} onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
                         {profile.name}
                     </h3>
                 )}
-                <div className="absolute top-2 right-2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={(e) => { e.stopPropagation(); setIsEditing(true); }} className="p-1.5 rounded-md text-slate-500 hover:text-blue-500 dark:hover:text-[var(--neon-cyan)] hover:bg-blue-500/10 dark:hover:bg-cyan-500/10" aria-label={`Rename voice profile ${profile.name}`}><EditIcon className="w-4 h-4" /></button>
-                    <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1.5 rounded-md text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 dark:hover:bg-red-500/10" aria-label={`Delete voice profile ${profile.name}`}><DeleteIcon className="w-4 h-4" /></button>
+                
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <button onClick={(e) => { e.stopPropagation(); setIsEditing(true); }} className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-cyan-400 hover:bg-blue-50 dark:hover:bg-cyan-900/20" aria-label={`Rename ${profile.name}`}><EditIcon className="w-3.5 h-3.5" /></button>
+                    <div className="w-px h-3 bg-slate-200 dark:bg-slate-700"></div>
+                    <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20" aria-label={`Delete ${profile.name}`}><DeleteIcon className="w-3.5 h-3.5" /></button>
                 </div>
             </div>
-            <p className="text-xs text-[var(--text-light-secondary)] dark:text-[var(--text-dark-secondary)] mt-1 line-clamp-1 tracking-tight">{profile.description}</p>
+            <p className={`text-xs mt-1 truncate font-medium ${isActive ? 'text-blue-600/70 dark:text-cyan-200/60' : 'text-slate-400 dark:text-slate-500'}`}>{profile.description}</p>
         </div>
     );
 };
@@ -200,14 +203,15 @@ export const VoiceLibrary: React.FC<VoiceLibraryProps> = ({
         if (!draggedProfileId || draggedProfileId === dropTargetProfile.id) { handleDragEnd(); return; }
 
         const fromIndex = profiles.findIndex(p => p.id === draggedProfileId);
-        const toIndex = profiles.findIndex(p => p.id === dropTargetProfile.id);
-        if (fromIndex === -1 || toIndex === -1) { handleDragEnd(); return; }
+        if (fromIndex === -1) { handleDragEnd(); return; }
 
+        // Move logic + Reorder
         const reorderedProfiles = [...profiles];
         const [movedProfile] = reorderedProfiles.splice(fromIndex, 1);
-        movedProfile.category = dropTargetProfile.category;
+        movedProfile.category = dropTargetProfile.category; // Update category!
 
         const newToIndex = reorderedProfiles.findIndex(p => p.id === dropTargetProfile.id);
+        // Insert before the drop target
         reorderedProfiles.splice(newToIndex, 0, movedProfile);
 
         onReorderProfiles(reorderedProfiles);
@@ -224,79 +228,104 @@ export const VoiceLibrary: React.FC<VoiceLibraryProps> = ({
         const fromIndex = profiles.findIndex(p => p.id === draggedProfileId);
         const reorderedProfiles = [...profiles];
         const [movedProfile] = reorderedProfiles.splice(fromIndex, 1);
-        movedProfile.category = targetCategory;
-        reorderedProfiles.push(movedProfile); // Add to end of list
+        movedProfile.category = targetCategory; // Move to new folder
+        
+        // Add to end of list (effectively end of that folder since we sort/group in view)
+        reorderedProfiles.push(movedProfile); 
 
         onReorderProfiles(reorderedProfiles);
         handleDragEnd();
+        // Auto-expand the target folder
+        if (!expandedFolders.has(targetCategory)) toggleFolder(targetCategory);
     };
 
     return (
-        <div className="h-full flex flex-col">
-            <div className="flex-shrink-0 p-6 space-y-4 border-b border-[var(--card-border-light)] dark:border-[var(--card-border-dark)]">
-                <div className="flex justify-between items-center">
-                    <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Library</h2>
+        <div className="h-full flex flex-col bg-white/30 dark:bg-black/20">
+            <div className="flex-shrink-0 p-5 border-b border-slate-200 dark:border-white/5 bg-white/60 dark:bg-black/40 backdrop-blur-md sticky top-0 z-20">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Library</h2>
                     <div className="flex items-center gap-2">
-                        <button onClick={() => setIsCreatingFolder(p => !p)} className="p-2 rounded-lg bg-[var(--control-bg-light)] dark:bg-[var(--control-bg-dark)] text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white transition-all" aria-label="Create new folder"><FolderPlusIcon className="w-5 h-5" /></button>
+                        <button 
+                            onClick={() => setIsCreatingFolder(p => !p)} 
+                            className="p-2 rounded-lg text-slate-500 hover:bg-white dark:hover:bg-white/10 hover:text-blue-600 dark:hover:text-cyan-400 transition-all border border-transparent hover:border-slate-200 dark:hover:border-white/10" 
+                            aria-label="Create new folder" title="New Folder"
+                        >
+                            <FolderPlusIcon className="w-5 h-5" />
+                        </button>
                         <button 
                             onClick={onCreateProfile} 
-                            className="flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-xl text-white transition-all duration-300 hover:-translate-y-px 
-                                       bg-[var(--btn-secondary-gradient-light)] shadow-[var(--btn-secondary-shadow-light)] hover:shadow-[var(--btn-secondary-shadow-hover-light)]
-                                       dark:bg-[var(--control-bg-dark)] dark:border dark:border-[var(--neon-cyan)] dark:shadow-[var(--neon-cyan-glow)] dark:hover:bg-cyan-900/40" 
+                            className="flex items-center gap-2 px-3 py-2 text-xs font-bold tracking-wide uppercase rounded-lg shadow-lg shadow-blue-500/20 text-white bg-blue-600 hover:bg-blue-500 dark:bg-cyan-500 dark:hover:bg-cyan-400 dark:text-black transition-all active:scale-95" 
                             aria-label="Create new voice profile"
                         >
-                            <PlusIcon className="w-4 h-4" />
+                            <PlusIcon className="w-3.5 h-3.5" />
                             <span>New Voice</span>
                         </button>
                     </div>
                 </div>
-                 <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none"><SearchIcon className="w-5 h-5 text-slate-400 dark:text-slate-500" /></span>
-                    <input type="text" placeholder="Search voices..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} aria-label="Search voice profiles" className="w-full bg-[var(--control-bg-light)] dark:bg-[var(--control-bg-dark)] rounded-lg border border-[var(--card-border-light)] dark:border-slate-700 focus:ring-2 focus:ring-blue-500 dark:focus:ring-[var(--neon-cyan)] dark:focus:border-[var(--neon-cyan)] focus:border-blue-500 transition text-base placeholder:text-slate-500 py-2.5 pl-10 pr-4 shadow-inner" />
+                 <div className="relative group">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><SearchIcon className="w-4 h-4 text-slate-400 group-focus-within:text-blue-500 dark:group-focus-within:text-cyan-400 transition-colors" /></span>
+                    <input 
+                        type="text" 
+                        placeholder="Filter voices..." 
+                        value={searchQuery} 
+                        onChange={(e) => setSearchQuery(e.target.value)} 
+                        className="w-full bg-white dark:bg-black/40 rounded-xl border border-slate-200 dark:border-white/10 focus:ring-2 focus:ring-blue-500 dark:focus:ring-cyan-400/50 focus:border-blue-500 dark:focus:border-cyan-400 transition-all text-sm py-2.5 pl-10 pr-3 shadow-sm placeholder:text-slate-400 font-medium" 
+                    />
                 </div>
                 {isCreatingFolder && (
-                    <div className="flex flex-col gap-2 pt-2 animate-fade-in">
+                    <div className="flex flex-col gap-2 pt-3 animate-fade-in">
                          <div className="flex gap-2 items-center">
-                            <input type="text" value={newFolderName} onChange={(e) => {setNewFolderName(e.target.value); setFolderError('')}} onKeyDown={(e) => e.key === 'Enter' && handleSaveFolder()} placeholder="New folder name..." className={`flex-grow bg-[var(--control-bg-light)] dark:bg-black/20 rounded-lg border transition text-sm px-3 py-1.5 w-full ${folderError ? 'border-red-500/50 ring-2 ring-red-500/30' : 'border-[var(--card-border-light)] dark:border-slate-700 focus:ring-2 focus:ring-blue-500 dark:focus:ring-[var(--neon-cyan)] focus:border-blue-500 dark:focus:border-[var(--neon-cyan)]'}`} autoFocus />
-                            <button onClick={handleSaveFolder} className="px-3 py-1.5 text-sm rounded-lg bg-blue-600 dark:bg-[var(--neon-blue)] text-white font-semibold hover:bg-blue-700 dark:hover:opacity-80 transition-opacity disabled:opacity-50" disabled={!newFolderName.trim()}>Save</button>
+                            <input type="text" value={newFolderName} onChange={(e) => {setNewFolderName(e.target.value); setFolderError('')}} onKeyDown={(e) => e.key === 'Enter' && handleSaveFolder()} placeholder="Folder Name" className={`flex-grow bg-white dark:bg-black/40 rounded-lg border text-sm px-3 py-2 w-full ${folderError ? 'border-red-300 ring-1 ring-red-100' : 'border-slate-200 dark:border-white/10 focus:ring-2 focus:ring-blue-500'}`} autoFocus />
+                            <button onClick={handleSaveFolder} className="px-3 py-2 text-xs font-bold uppercase rounded-lg bg-slate-900 dark:bg-white text-white dark:text-black hover:opacity-90 transition-opacity" disabled={!newFolderName.trim()}>Add</button>
                         </div>
-                        {folderError && <p className="text-xs text-red-500 dark:text-red-400 mt-1 px-1">{folderError}</p>}
+                        {folderError && <p className="text-xs text-red-500 mt-1">{folderError}</p>}
                     </div>
                 )}
             </div>
-            <div className="flex-grow overflow-y-auto p-4 space-y-2">
+            <div className="flex-grow overflow-y-auto p-3 space-y-3 custom-scrollbar">
                 {Object.keys(groupedProfiles).length > 0 ? (
                     Object.entries(groupedProfiles).map(([category, voices]: [string, VoiceProfile[]]) => {
                         const isExpanded = expandedFolders.has(category);
                         const CategoryIcon = categoryIcons[category] || MyVoicesIcon;
                         const isFolderDropTarget = dropTargetId === `folder-${category}`;
+                        
                         return (
-                            <div key={category} className={`dark:bg-black/20 rounded-2xl transition-all duration-300 group ${isFolderDropTarget ? 'outline outline-2 outline-offset-2 outline-blue-500 dark:outline-[var(--neon-cyan)]' : ''}`}>
+                            <div 
+                                key={category} 
+                                className={`transition-all duration-300 rounded-xl border ${isFolderDropTarget ? 'border-blue-500 dark:border-cyan-400 bg-blue-50 dark:bg-cyan-900/20 shadow-md scale-[1.02]' : 'border-transparent'}`}
+                                onDragOver={(e) => handleFolderDragOver(e, category)}
+                                onDragLeave={handleFolderDragLeave}
+                                onDrop={(e) => handleFolderDrop(e, category)}
+                            >
                                 <button 
                                     onClick={() => toggleFolder(category)} 
-                                    className="w-full flex justify-between items-center p-4 text-left transition-all duration-300 rounded-2xl group-hover:dark:bg-slate-800/40 group-hover:-translate-y-0.5 group-hover:shadow-lg"
+                                    className="w-full flex justify-between items-center py-2.5 px-3 text-left group hover:bg-slate-100 dark:hover:bg-white/5 transition-colors rounded-lg"
                                     aria-expanded={isExpanded}
-                                    aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${category} category`}
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-2 bg-slate-200 dark:bg-slate-900/50 rounded-lg"><CategoryIcon className="w-6 h-6 text-slate-700 dark:text-[var(--neon-cyan)] flex-shrink-0" /></div>
-                                        <div className="flex flex-col text-left">
-                                            <span className="font-semibold text-base tracking-tight text-slate-800 dark:text-slate-100 leading-tight">{category}</span>
-                                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-tight mt-1">{voices.length} {voices.length === 1 ? 'item' : 'items'}</span>
+                                    <div className="flex items-center gap-3">
+                                        <div className={`transition-colors ${isExpanded ? 'text-blue-600 dark:text-cyan-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`}>
+                                            <CategoryIcon className="w-5 h-5" />
                                         </div>
+                                        <span className={`font-bold text-xs tracking-wide uppercase transition-colors ${isExpanded ? 'text-blue-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200'}`}>{category}</span>
                                     </div>
-                                    <ChevronDownIcon className={`w-5 h-5 transition-transform duration-300 text-slate-500 ${isExpanded ? 'rotate-180' : ''}`} />
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-[10px] font-mono font-medium text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-full">{voices.length}</span>
+                                        <ChevronDownIcon className={`w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                                    </div>
                                 </button>
+                                
                                 {isExpanded && (
-                                    <div 
-                                        id={`folder-${category}`}
-                                        className="px-3 pb-3 space-y-2 animate-fade-in"
-                                        onDragOver={(e) => handleFolderDragOver(e, category)}
-                                        onDragLeave={handleFolderDragLeave}
-                                        onDrop={(e) => handleFolderDrop(e, category)}
-                                    >
+                                    <div className="pl-3 pr-1 pt-1 pb-3 space-y-1.5 animate-fade-in">
                                         {voices.map(profile => (
-                                            <VoiceItem key={profile.id} profile={profile} isActive={activeProfileId === profile.id} isDragged={draggedItemId === profile.id} isDropTarget={dropTargetId === profile.id} onSelect={() => onSelectProfile(profile.id)} onDelete={() => onDeleteProfile(profile.id)} onUpdate={(updates) => onUpdateProfile(profile.id, updates)}
+                                            <VoiceItem 
+                                                key={profile.id} 
+                                                profile={profile} 
+                                                isActive={activeProfileId === profile.id} 
+                                                isDragged={draggedItemId === profile.id} 
+                                                isDropTarget={dropTargetId === profile.id} 
+                                                onSelect={() => onSelectProfile(profile.id)} 
+                                                onDelete={() => onDeleteProfile(profile.id)} 
+                                                onUpdate={(updates) => onUpdateProfile(profile.id, updates)}
                                                 dragAndDropProps={{ 
                                                     draggable: true, 
                                                     onDragStart: (e) => handleDragStart(e, profile.id), 
@@ -306,9 +335,14 @@ export const VoiceLibrary: React.FC<VoiceLibraryProps> = ({
                                                 }}
                                             />
                                         ))}
-                                        {voices.length === 0 && draggedItemId && (
-                                            <div className="p-6 border-2 border-dashed rounded-xl text-center text-sm text-slate-400 dark:text-slate-500 border-slate-300 dark:border-slate-700 pointer-events-none">
-                                                Move to "{category}"
+                                        {(voices.length === 0 || (draggedItemId && !voices.some(v => v.id === draggedItemId))) && (
+                                            <div className={`
+                                                py-8 rounded-lg border-2 border-dashed text-center transition-all duration-300
+                                                ${isFolderDropTarget 
+                                                    ? 'border-blue-400 dark:border-cyan-400 bg-blue-50/50 dark:bg-cyan-900/10 text-blue-600 dark:text-cyan-400 scale-100 opacity-100' 
+                                                    : 'border-slate-200 dark:border-white/5 text-slate-400 scale-95 opacity-50'}
+                                            `}>
+                                                <p className="text-xs font-semibold uppercase tracking-wide pointer-events-none">Drop to Move Here</p>
                                             </div>
                                         )}
                                     </div>
@@ -317,9 +351,15 @@ export const VoiceLibrary: React.FC<VoiceLibraryProps> = ({
                         );
                     })
                 ) : profiles.length > 0 && searchQuery.trim() ? (
-                    <div className="text-center py-10 text-[var(--text-light-secondary)] dark:text-[var(--text-dark-secondary)]"><p>No results found for "{searchQuery}".</p></div>
+                    <div className="text-center py-12 text-slate-400"><p>No voices match "{searchQuery}"</p></div>
                 ) : profiles.length === 0 ? (
-                    <div className="text-center py-10 text-[var(--text-light-secondary)] dark:text-[var(--text-dark-secondary)] h-full flex flex-col items-center justify-center"><p>Your library is empty.</p><p>Click the '+' button to begin.</p></div>
+                    <div className="text-center py-12 text-slate-400 flex flex-col items-center gap-4">
+                        <div className="p-4 bg-slate-100 dark:bg-white/5 rounded-full">
+                            <MyVoicesIcon className="w-8 h-8 opacity-50" />
+                        </div>
+                        <p className="text-sm font-medium">Library is empty.</p>
+                        <button onClick={onCreateProfile} className="text-blue-500 dark:text-cyan-400 text-xs font-bold uppercase hover:underline">Create your first voice</button>
+                    </div>
                 ) : null}
             </div>
         </div>

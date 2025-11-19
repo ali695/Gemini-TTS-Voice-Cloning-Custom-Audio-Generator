@@ -7,99 +7,148 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
         
         :root {
             /* Shared */
             --font-main: 'Inter', sans-serif;
-            --ease-in-out: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --font-mono: 'JetBrains Mono', monospace;
+            --ease-spring: cubic-bezier(0.2, 0.8, 0.2, 1);
+            --ease-out: cubic-bezier(0.215, 0.610, 0.355, 1.000);
 
-            /* Light Theme */
-            --bg-light: #f3f4f6; /* gray-100 */
-            --bg-grid-light: rgba(0, 0, 0, 0.05);
-            --text-light-primary: #111827; /* gray-900 */
-            --text-light-secondary: #6b7280; /* gray-500 */
-            --card-bg-light: rgba(255, 255, 255, 0.75);
-            --card-border-light: rgba(0, 0, 0, 0.07);
-            --card-shadow-light: 0 10px 15px -3px rgba(0, 0, 0, 0.03), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
-            --control-bg-light: #f3f4f6; /* gray-100 */
-            --control-hover-bg-light: #e5e7eb; /* gray-200 */
-            --accent-glow-light: 0 0 15px rgba(59, 130, 246, 0.3); /* blue-500 */
+            /* Light Theme - Clean Studio */
+            --bg-light: #f8fafc;
+            --bg-subtle-light: #f1f5f9;
+            --text-light-primary: #0f172a;
+            --text-light-secondary: #64748b;
             
-            /* Primary Button (Light) */
-            --btn-primary-gradient-light: linear-gradient(145deg, #A982FF, #6C47FF);
-            --btn-primary-shadow-light: 0 4px 15px -3px rgba(108, 71, 255, 0.4);
-            --btn-primary-shadow-hover-light: 0 6px 20px -3px rgba(108, 71, 255, 0.5);
+            --card-bg-light: rgba(255, 255, 255, 0.85);
+            --card-border-light: #e2e8f0;
+            --card-shadow-light: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            
+            /* Professional Accents (Light) */
+            --accent-light: #3b82f6; /* blue-500 */
+            --accent-hover-light: #2563eb; /* blue-600 */
+            --accent-dim-light: rgba(59, 130, 246, 0.1);
+            
+            /* Controls (Light) */
+            --control-bg-light: #ffffff;
+            --control-border-light: #cbd5e1;
+            --control-hover-bg-light: #f8fafc;
 
-            /* Secondary Button (Light) */
-            --btn-secondary-gradient-light: linear-gradient(145deg, #13E1A8, #00C98D);
-            --btn-secondary-shadow-light: 0 4px 15px -3px rgba(0, 201, 141, 0.3);
-            --btn-secondary-shadow-hover-light: 0 6px 20px -3px rgba(0, 201, 141, 0.4);
+            /* Dark Theme - Cinematic Pro */
+            --bg-dark: #09090b;
+            --bg-subtle-dark: #18181b;
+            --text-dark-primary: #f8fafc;
+            --text-dark-secondary: #94a3b8;
             
-            /* Dark Theme - Cinematic Studio Redesign */
-            --bg-dark: #0a0910;
-            --bg-grid-dark: rgba(255, 255, 255, 0.03);
-            --text-dark-primary: #f8fafc; /* slate-50 */
-            --text-dark-secondary: #94a3b8; /* slate-400 */
-            --card-bg-dark: rgba(20, 19, 30, 0.5); /* Frosted dark purple */
+            --card-bg-dark: rgba(24, 24, 27, 0.6);
             --card-border-dark: rgba(255, 255, 255, 0.08);
-            --card-shadow-dark: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            --control-bg-dark: rgba(10, 9, 20, 0.5); /* Darker frosted */
-            --control-hover-bg-dark: rgba(30, 29, 40, 0.7);
-            --neon-cyan: #22d3ee;
-            --neon-purple: #a78bfa;
-            --neon-blue: #38bdf8;
-            --neon-cyan-glow: 0 0 15px -3px rgba(34, 211, 238, 0.4);
-            --neon-purple-glow: 0 0 15px -3px rgba(167, 139, 250, 0.4);
-            --generate-gradient: linear-gradient(90deg, var(--neon-purple), var(--neon-blue));
-            --generate-shadow: 0 8px 25px -5px rgba(100, 150, 255, 0.3);
-            --generate-shadow-hover: 0 10px 30px -5px rgba(120, 170, 255, 0.4);
+            --card-shadow-dark: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            
+            /* Professional Accents (Dark) */
+            --accent-dark: #22d3ee; /* cyan-400 */
+            --accent-hover-dark: #67e8f9; /* cyan-300 */
+            --accent-dim-dark: rgba(34, 211, 238, 0.1);
+
+            /* Controls (Dark) */
+            --control-bg-dark: #18181b;
+            --control-border-dark: #27272a;
+            --control-hover-bg-dark: #27272a;
         }
 
         body {
             font-family: var(--font-main);
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
-            font-feature-settings: 'kern';
-            transition: var(--ease-in-out);
-            transition-property: background-color, color;
-            position: relative;
-        }
-
-        html:not(.dark) body {
             background-color: var(--bg-light);
-            background-image: radial-gradient(circle at 1px 1px, var(--bg-grid-light) 1px, transparent 0);
-            background-size: 24px 24px;
             color: var(--text-light-primary);
+            transition: background-color 0.3s var(--ease-out), color 0.3s var(--ease-out);
         }
 
         html.dark body {
             background-color: var(--bg-dark);
-            background-image: 
-                radial-gradient(circle at 1px 1px, var(--bg-grid-dark) 1px, transparent 0),
-                radial-gradient(ellipse at center, rgba(30, 20, 60, 0.3) 0%, transparent 70%);
-            background-size: 24px 24px, 100% 100%;
             color: var(--text-dark-primary);
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(34, 211, 238, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 0% 100%, rgba(168, 85, 247, 0.05) 0%, transparent 30%);
+            background-attachment: fixed;
         }
-        
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background-color: transparent; }
-        html:not(.dark) ::-webkit-scrollbar-thumb { background-color: #d1d5db; border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
-        html.dark ::-webkit-scrollbar-thumb { background-color: #475569; border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        html.dark ::-webkit-scrollbar-thumb { background: #3f3f46; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        html.dark ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+        /* Professional Range Slider (Fader Style) */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+            cursor: pointer;
+            height: 20px; /* Height of the touch area */
+            margin: 0;
+        }
+
+        input[type=range]:focus { outline: none; }
+
+        /* Track */
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #e2e8f0;
+            border-radius: 2px;
+            transition: background 0.2s;
+        }
+        html.dark input[type=range]::-webkit-slider-runnable-track {
+            background: #27272a;
+        }
+
+        /* Thumb */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+            margin-top: -6px; /* (trackHeight - thumbHeight) / 2 */
+            transition: all 0.15s var(--ease-spring);
+        }
+        html.dark input[type=range]::-webkit-slider-thumb {
+            background: #18181b;
+            border: 2px solid #22d3ee;
+            box-shadow: 0 0 8px rgba(34, 211, 238, 0.2);
+        }
+
+        /* Active State */
+        input[type=range]:active::-webkit-slider-thumb {
+            transform: scale(1.1);
+            border-color: var(--accent-light);
+            box-shadow: 0 0 0 3px var(--accent-dim-light);
+        }
+        html.dark input[type=range]:active::-webkit-slider-thumb {
+            border-color: var(--accent-dark);
+            background: #22d3ee;
+            box-shadow: 0 0 0 4px var(--accent-dim-dark);
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.3s var(--ease-spring) forwards; }
         
-        @keyframes pulse-glow-dark {
-            0%, 100% { box-shadow: var(--generate-shadow); }
-            50% { box-shadow: var(--generate-shadow-hover); }
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
-        @keyframes pulse-glow-light {
-            0%, 100% { box-shadow: var(--btn-primary-shadow-light); }
-            50% { box-shadow: var(--btn-primary-shadow-hover-light); }
-        }
+
         @keyframes shine {
-            0% { transform: translateX(-100%) skewX(-20deg); }
-            100% { transform: translateX(200%) skewX(-20deg); }
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
         }
     </style>
 <script type="importmap">
