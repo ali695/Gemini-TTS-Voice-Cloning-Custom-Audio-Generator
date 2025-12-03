@@ -5,6 +5,7 @@ import { VoiceBuilder } from './components/VoiceBuilder';
 import { VoiceSettings } from './components/VoiceSettings';
 import { ScriptEditor } from './components/ScriptEditor';
 import { VoiceLibrary } from './components/VoiceLibrary';
+import { ChatInterface } from './components/ChatInterface';
 import { defaultVoiceProfiles } from './data/voiceProfiles';
 import type { VoiceProfile, VoiceSettings as VoiceSettingsType } from './types';
 
@@ -129,6 +130,8 @@ const App: React.FC = () => {
                     breathingLevel: 0.1,
                     stability: 0.75,
                     accent: 'Neutral EN',
+                    reverb: 0,
+                    creepiness: 0,
                 },
                 vibe: 'Friendly',
             };
@@ -209,10 +212,8 @@ const App: React.FC = () => {
                     </div>
                 )}
                  {activeTab === 'chat' && (
-                    <GlassCard className="flex-grow">
-                         <div className="h-full flex-grow flex items-center justify-center p-6">
-                            <p className="text-2xl font-bold text-center text-[var(--text-light-secondary)] dark:text-[var(--text-dark-secondary)]">Chatbot Interface Coming Soon</p>
-                        </div>
+                    <GlassCard className="flex-grow max-w-5xl mx-auto w-full">
+                         <ChatInterface />
                     </GlassCard>
                 )}
             </main>

@@ -2,7 +2,9 @@
 export function decode(base64: string): Uint8Array {
     const binaryString = atob(base64);
     const len = binaryString.length;
-    const bytes = new Uint8Array(len);
+    // Ensure even length for Int16Array compatibility
+    const padding = len % 2;
+    const bytes = new Uint8Array(len + padding);
     for (let i = 0; i < len; i++) {
         bytes[i] = binaryString.charCodeAt(i);
     }
@@ -15,7 +17,9 @@ export async function decodeAudioData(
     sampleRate: number,
     numChannels: number,
 ): Promise<AudioBuffer> {
-    const dataInt16 = new Int16Array(data.buffer);
+    // data.buffer might be larger than data if it's a slice of a larger buffer, 
+    // so we must use data.byteOffset and data.byteLength
+    const dataInt16 = new Int16Array(data.buffer, data.byteOffset, data.byteLength / 2);
     const frameCount = dataInt16.length / numChannels;
     const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
 
@@ -92,4 +96,27 @@ export function createWavBlob(audioBuffer: AudioBuffer): Blob {
     }
 
     return new Blob([view], { type: 'audio/wav' });
+}
+
+export function sliceAudioBuffer(buffer: AudioBuffer, start: number, end: number, ctx: AudioContext): AudioBuffer {
+    const rate = buffer.sampleRate;
+    const startOffset = Math.max(0, Math.floor(start * rate));
+    const endOffset = Math.min(buffer.length, Math.floor(end * rate));
+    const frameCount = Math.max(0, endOffset - startOffset);
+
+    // Create a new buffer with the trimmed length
+    // If exact length is 0, create a tiny buffer to avoid errors, but effectively empty
+    const actualFrameCount = frameCount === 0 ? 1 : frameCount;
+    const newBuffer = ctx.createBuffer(buffer.numberOfChannels, actualFrameCount, rate);
+
+    if (frameCount > 0) {
+        for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+            const oldData = buffer.getChannelData(channel);
+            const newData = newBuffer.getChannelData(channel);
+            for (let i = 0; i < frameCount; i++) {
+                newData[i] = oldData[startOffset + i];
+            }
+        }
+    }
+    return newBuffer;
 }

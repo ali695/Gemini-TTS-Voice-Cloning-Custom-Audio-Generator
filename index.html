@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,55 +7,46 @@
     <title>VoiceGen Studio</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
         
         :root {
-            /* Shared */
-            --font-main: 'Inter', sans-serif;
+            /* Shared Typography */
+            --font-main: 'Plus Jakarta Sans', sans-serif;
             --font-mono: 'JetBrains Mono', monospace;
+            
+            /* Animation Curves */
             --ease-spring: cubic-bezier(0.2, 0.8, 0.2, 1);
             --ease-out: cubic-bezier(0.215, 0.610, 0.355, 1.000);
 
             /* Light Theme - Clean Studio */
-            --bg-light: #f8fafc;
-            --bg-subtle-light: #f1f5f9;
-            --text-light-primary: #0f172a;
-            --text-light-secondary: #64748b;
+            --bg-light: #F8F9FA;
+            --text-light-primary: #111827;
+            --text-light-secondary: #6B7280;
             
-            --card-bg-light: rgba(255, 255, 255, 0.85);
-            --card-border-light: #e2e8f0;
-            --card-shadow-light: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            /* Softer, more ambient card style */
+            --card-bg-light: #FFFFFF;
+            --card-border-light: #F3F4F6;
+            --card-shadow-light: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
             
             /* Professional Accents (Light) */
-            --accent-light: #3b82f6; /* blue-500 */
-            --accent-hover-light: #2563eb; /* blue-600 */
-            --accent-dim-light: rgba(59, 130, 246, 0.1);
+            --accent-light: #4F46E5; 
+            --accent-hover-light: #4338CA; 
+            --accent-dim-light: rgba(79, 70, 229, 0.08);
             
-            /* Controls (Light) */
-            --control-bg-light: #ffffff;
-            --control-border-light: #cbd5e1;
-            --control-hover-bg-light: #f8fafc;
-
             /* Dark Theme - Cinematic Pro */
-            --bg-dark: #09090b;
-            --bg-subtle-dark: #18181b;
-            --text-dark-primary: #f8fafc;
-            --text-dark-secondary: #94a3b8;
+            --bg-dark: #09090B;
+            --text-dark-primary: #FAFAFA;
+            --text-dark-secondary: #A1A1AA;
             
-            --card-bg-dark: rgba(24, 24, 27, 0.6);
-            --card-border-dark: rgba(255, 255, 255, 0.08);
-            --card-shadow-dark: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            --card-bg-dark: #18181B;
+            --card-border-dark: #27272A;
+            --card-shadow-dark: 0 4px 20px -2px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
             
             /* Professional Accents (Dark) */
-            --accent-dark: #22d3ee; /* cyan-400 */
-            --accent-hover-dark: #67e8f9; /* cyan-300 */
-            --accent-dim-dark: rgba(34, 211, 238, 0.1);
-
-            /* Controls (Dark) */
-            --control-bg-dark: #18181b;
-            --control-border-dark: #27272a;
-            --control-hover-bg-dark: #27272a;
+            --accent-dark: #6366F1; 
+            --accent-hover-dark: #818CF8; 
+            --accent-dim-dark: rgba(99, 102, 241, 0.15);
         }
 
         body {
@@ -63,25 +55,24 @@
             -moz-osx-font-smoothing: grayscale;
             background-color: var(--bg-light);
             color: var(--text-light-primary);
-            transition: background-color 0.3s var(--ease-out), color 0.3s var(--ease-out);
+            transition: background-color 0.4s var(--ease-out), color 0.4s var(--ease-out);
+            overflow-y: auto;
+            overflow-x: hidden;
         }
 
         html.dark body {
             background-color: var(--bg-dark);
             color: var(--text-dark-primary);
-            background-image: 
-                radial-gradient(circle at 50% 0%, rgba(34, 211, 238, 0.05) 0%, transparent 50%),
-                radial-gradient(circle at 0% 100%, rgba(168, 85, 247, 0.05) 0%, transparent 30%);
-            background-attachment: fixed;
+            background-image: none; /* Removed gradient for cleaner pro look */
         }
 
-        /* Custom Scrollbar */
+        /* Premium Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        html.dark ::-webkit-scrollbar-thumb { background: #3f3f46; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        html.dark ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+        ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.3); border-radius: 99px; }
+        html.dark ::-webkit-scrollbar-thumb { background: rgba(82, 82, 91, 0.5); }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(156, 163, 175, 0.6); }
+        html.dark ::-webkit-scrollbar-thumb:hover { background: rgba(113, 113, 122, 0.8); }
 
         /* Professional Range Slider (Fader Style) */
         input[type=range] {
@@ -89,7 +80,7 @@
             width: 100%;
             background: transparent;
             cursor: pointer;
-            height: 20px; /* Height of the touch area */
+            height: 24px; /* Increased height for better touch target */
             margin: 0;
         }
 
@@ -98,57 +89,85 @@
         /* Track */
         input[type=range]::-webkit-slider-runnable-track {
             width: 100%;
-            height: 4px;
+            height: 6px; /* Slightly thicker for premium feel */
             cursor: pointer;
-            background: #e2e8f0;
-            border-radius: 2px;
+            background: #E4E4E7;
+            border-radius: 99px;
             transition: background 0.2s;
         }
         html.dark input[type=range]::-webkit-slider-runnable-track {
-            background: #27272a;
+            background: #27272A;
         }
 
         /* Thumb */
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            height: 16px;
-            width: 16px;
+            height: 18px;
+            width: 18px;
             border-radius: 50%;
-            background: #ffffff;
-            border: 1px solid #cbd5e1;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
-            margin-top: -6px; /* (trackHeight - thumbHeight) / 2 */
-            transition: all 0.15s var(--ease-spring);
+            background: #FFFFFF;
+            border: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+            margin-top: -6px; /* Center thumb on track (6px track height / 2) - (18px thumb height / 2) */
+            transition: transform 0.15s var(--ease-spring), box-shadow 0.15s;
         }
         html.dark input[type=range]::-webkit-slider-thumb {
-            background: #18181b;
-            border: 2px solid #22d3ee;
-            box-shadow: 0 0 8px rgba(34, 211, 238, 0.2);
+            background: #E4E4E7;
+            border: none;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
 
         /* Active State */
-        input[type=range]:active::-webkit-slider-thumb {
+        input[type=range]:hover::-webkit-slider-thumb {
             transform: scale(1.1);
-            border-color: var(--accent-light);
-            box-shadow: 0 0 0 3px var(--accent-dim-light);
+        }
+        input[type=range]:active::-webkit-slider-thumb {
+            transform: scale(1.15);
+            box-shadow: 0 0 0 4px var(--accent-dim-light);
         }
         html.dark input[type=range]:active::-webkit-slider-thumb {
-            border-color: var(--accent-dark);
-            background: #22d3ee;
             box-shadow: 0 0 0 4px var(--accent-dim-dark);
         }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fadeIn 0.3s var(--ease-spring) forwards; }
+        .animate-fade-in { animation: fadeIn 0.3s var(--ease-out) forwards; }
         
-        @keyframes pulse-soft {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-
         @keyframes shine {
             0% { transform: translateX(-100%); }
             100% { transform: translateX(100%); }
+        }
+        
+        /* Glass Panel Utility */
+        .glass-panel {
+            background: var(--card-bg-light);
+            border: 1px solid var(--card-border-light);
+            box-shadow: var(--card-shadow-light);
+        }
+        html.dark .glass-panel {
+            background: var(--card-bg-dark);
+            border: 1px solid var(--card-border-dark);
+            box-shadow: var(--card-shadow-dark);
+        }
+        
+        /* Consistent Button/Input Base */
+        .ui-base-input {
+            height: 42px;
+            border-radius: 12px;
+        }
+        
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #E5E7EB;
+            border-radius: 4px;
+        }
+        html.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #3f3f46;
         }
     </style>
 <script type="importmap">

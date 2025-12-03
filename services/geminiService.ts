@@ -1,4 +1,5 @@
-import { GoogleGenAI, Modality } from "@google/genai";
+
+import { GoogleGenAI, Chat } from "@google/genai";
 import type { VoiceProfile } from '../types';
 
 // IMPORTANT: This key is managed externally and will be provided in the execution environment.
@@ -6,137 +7,230 @@ import type { VoiceProfile } from '../types';
 const API_KEY = process.env.API_KEY;
 
 if (!API_KEY) {
-  // In a real app, you might want to handle this more gracefully.
-  // For this environment, we assume the key is always present.
   console.warn("API_KEY environment variable not set.");
 }
 
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 
-// This function creates a detailed, context-aware prompt to guide the AI model
-// into generating a voice that accurately matches the selected profile.
+// Retry configuration
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000;
+
+async function retryOperation<T>(operation: () => Promise<T>, retries = MAX_RETRIES, delay = INITIAL_RETRY_DELAY): Promise<T> {
+    try {
+        return await operation();
+    } catch (error: any) {
+        // Check for retryable errors (500, 503, 429, or XHR errors which often manifest as generic errors or code 6)
+        const isRetryable = 
+            error.status === 500 || 
+            error.status === 503 || 
+            error.status === 429 ||
+            (error.message && error.message.includes('xhr error')) ||
+            (error.message && error.message.includes('fetch failed'));
+
+        if (retries > 0 && isRetryable) {
+            console.warn(`API attempt failed. Retrying in ${delay}ms... (Retries left: ${retries})`, error);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            // Exponential backoff
+            return retryOperation(operation, retries - 1, delay * 2);
+        }
+        throw error;
+    }
+}
+
 function constructPrompt(script: string, profile: VoiceProfile): string {
     const { name, category, settings, vibe, audioSampleUrl } = profile;
 
+    // Handle Horror Atmosphere Modifiers
+    let atmosphereInstruction = "";
+    if (settings.reverb && settings.reverb > 0.1) {
+        if (settings.reverb > 0.8) atmosphereInstruction += " with a heavy, cavernous reverb and echo as if in a large, empty hall, ";
+        else if (settings.reverb > 0.4) atmosphereInstruction += " with a distinct, noticeable reverb, ";
+        else atmosphereInstruction += " with a slight, subtle echo, ";
+    }
+
+    if (settings.creepiness && settings.creepiness > 0.1) {
+        if (settings.creepiness > 0.8) atmosphereInstruction += " in a terrifying, nightmarish tone filled with dread, ";
+        else if (settings.creepiness > 0.5) atmosphereInstruction += " in an unsettling, creepy, and disturbing tone, ";
+        else atmosphereInstruction += " with a subtle, eerie undertone, ";
+    }
+
     if (audioSampleUrl) {
-        // This is a cloned voice. Prioritize the user's voice identity above all else.
-        const cloningInstruction = `CRITICAL INSTRUCTION: The user has provided a reference audio file for strict voice-to-voice cloning. Your highest priority is to generate the following script in a voice that EXACTLY matches the core vocal identity of the speaker from the user's reference file. This includes perfectly replicating their natural tone, timbre, accent, pacing, pitch, warmth, breathiness, and unique vocal characteristics. The generated audio must sound like the exact same person.`;
-        const stylingInstruction = `The selected 'Personality & Vibe' of '${vibe}' should ONLY influence the intonation, mood, and emotional delivery of the speech. It must NOT alter the core sound or identity of the cloned voice. Style the performance on top of the user's voice; do not replace it with a preset model.`;
-        
-        return `${cloningInstruction} ${stylingInstruction} The script to be spoken is: "${script}"`;
+        const cloningInstruction = `CRITICAL: Strict voice cloning required. Replicate the user's reference audio identity exactly. Match tone, timbre, accent, pacing, pitch, warmth, and breathiness.`;
+        const stylingInstruction = `The vibe '${vibe}' should only influence emotion, not identity. ${atmosphereInstruction}`;
+        return `${cloningInstruction} ${stylingInstruction}\n\nContent to read: "${script}"`;
     }
 
     let mainInstruction = '';
     const nameLower = name.toLowerCase();
 
-    // Create highly specific instructions based on the category for maximum accuracy.
-    switch (category) {
-        case 'Ultra-Horror':
-            const horrorPreamble = 'The voice should sound professionally sound-designed for a horror film or game. ';
-            if (nameLower.includes('demonic')) mainInstruction = horrorPreamble + 'in a deep, layered, and distorted demonic voice with heavy, eerie reverb, low demonic harmonics, and a subtle, deep heartbeat bass tone in the background. The voice should have an echoing quality and include subtle, non-human growls.';
-            else if (nameLower.includes('witch')) mainInstruction = horrorPreamble + 'in a high-pitched, cackling, and sinister witch-like voice, with sharp, cutting tones and a hint of a rasp.';
-            else if (nameLower.includes('possessed')) mainInstruction = horrorPreamble + 'in a raspy, strained, close-mic whisper, as if possessed, with unsettling quiet moments and faint background whispers that have a subtle, eerie reverb and whisper echo. The performance should have sudden shifts in tone and pitch, and emphasize sharp inhales.';
-            else if (nameLower.includes('ghost')) mainInstruction = horrorPreamble + 'in an ethereal, airy, and cold ghost voice. It must sound disembodied, with a noticeable eerie reverb and a sense of distant sorrow that echoes slightly.';
-            else if (nameLower.includes('monster')) mainInstruction = horrorPreamble + 'in a very deep, guttural, and inhuman monster-like growl, with a rumbling, visceral quality and a hint of a wet, throaty sound, as if struggling to form words.';
-            else mainInstruction = horrorPreamble + 'in the creepy, slow, and slightly shaky voice of an old man telling a terrifying horror story, emphasizing suspenseful pauses and a cracking, dry vocal quality.';
-            break;
+    // Category-specific instructions
+    if (category === 'Quranic Recitation') {
+        const quranPreamble = "Perform a respectful, authentic male Islamic vocal performance (Murattal style). Use a warm, breath-controlled voice with precise articulation. No music. Light room ambience.";
+        if (nameLower.includes('mishary')) mainInstruction = `${quranPreamble} Style: Mishary Alafasy - smooth, emotional, gentle baritone.`;
+        else if (nameLower.includes('sudais')) mainInstruction = `${quranPreamble} Style: Sudais - deep chest voice, powerful, fast-paced Hadr.`;
+        else if (nameLower.includes('hussary')) mainInstruction = `${quranPreamble} Style: Hussary - very slow, precise, academic Tajwīd.`;
+        else if (nameLower.includes('minshawi')) mainInstruction = `${quranPreamble} Style: Minshawi - sad (Nahawand), emotional, gentle vibrato.`;
+        else if (nameLower.includes('abdul basit')) mainInstruction = `${quranPreamble} Style: Abdul Basit - powerful, resonant, long breath, Egyptian Mujawwad.`;
+        else mainInstruction = `${quranPreamble} Style: Authentic Male Qari.`;
+    
+    } else if (category === 'Sleep Learning & Long Form') {
+        const sleepPreamble = "Perform in a slow, steady, and incredibly stable voice suitable for long-form listening and subconscious learning. Maintain perfectly consistent volume and pacing.";
         
-        case 'Characters':
-            let charPerformanceNote = `The performance should be ${vibe.toLowerCase()}`;
-            if (nameLower.includes('robot') || nameLower.includes('ai')) {
-                 mainInstruction = `in the voice of a character: a synthetic AI. The performance should be clear and articulate, with a slightly processed, cybernetic quality. It should be mostly monotonous but with subtle intonations to match the '${vibe}' mood.`;
-            } else if (nameLower.includes('wizard')) {
-                mainInstruction = `in the voice of a character: a wise, ancient wizard. The voice should be deep, resonant, and slightly gravelly with age. The pacing is slow and deliberate, filled with gravitas. ${charPerformanceNote}.`;
-            } else if (nameLower.includes('pirate')) {
-                mainInstruction = `in the voice of a character: a boisterous pirate captain. The voice is gruff, hearty, and full of swagger, with a classic, exaggerated pirate accent. ${charPerformanceNote}.`;
-            } else if (nameLower.includes('fairy')) {
-                mainInstruction = `in the voice of a character: a magical fairy. The voice should be light, ethereal, and musical, with a soft, enchanting quality. ${charPerformanceNote}.`;
-            } else if (nameLower.includes('epic sage')) {
-                mainInstruction = `in the voice of a character: a fantasy epic sage. The voice is deep, wise, and ancient, perfect for narrating tales of myth and magic with a dramatic and powerful tone.`;
-            } else {
-                mainInstruction = `in the voice of a character: ${name}. The performance should be ${vibe.toLowerCase()}`;
-            }
-            break;
+        if (nameLower.includes('night drive')) {
+            mainInstruction = `${sleepPreamble} Style: 'Night Drive' Radio Host. Deep, soft-spoken male voice. Very calm, reassuring, and intimate. Clear articulation for English learning, but relaxed.`;
+        } else if (nameLower.includes('subconscious')) {
+            mainInstruction = `${sleepPreamble} Style: Hypnotic Learning. Gentle, rhythmic female voice. Clear pauses between phrases to allow for mental processing. Soft, non-intrusive.`;
+        } else if (nameLower.includes('hypnosis')) {
+            mainInstruction = `${sleepPreamble} Style: Deep Hypnosis. Extremely slow, resonant, monophonic male voice. Bore into the subconscious.`;
+        } else {
+            mainInstruction = `${sleepPreamble} Style: Gentle Bedtime Reader. Soft and soothing.`;
+        }
 
-        case 'Soft Intimate Whisper':
-            const asmrPreamble = 'Use a close-mic ASMR technique. The voice should be extremely soft, intimate, and relaxing. ';
-            if (nameLower.includes('breathy') || nameLower.includes('soft girl')) mainInstruction = asmrPreamble + 'in an extremely soft, breathy, and airy young female whisper, focusing on gentle pacing and capturing the sound of every breath.';
-            else if (nameLower.includes('deep') || nameLower.includes('velvet')) mainInstruction = asmrPreamble + 'in a very deep, resonant, and smooth female whisper, recorded extremely close to the microphone to capture rich, low-frequency tones and every subtle mouth sound.';
-            else if (nameLower.includes('seductive') || nameLower.includes('sensual') || nameLower.includes('romantic')) mainInstruction = asmrPreamble + 'in a gentle, warm, and seductive female whisper, spoken slowly and closely with a tender, emotionally rich quality and soft, breathy exhales.';
-            else if (nameLower.includes('ear-to-ear')) mainInstruction = asmrPreamble + 'in a binaural-style female whisper designed to create an immersive, ear-to-ear effect for the listener, with a feeling of extreme closeness.';
-            else mainInstruction = asmrPreamble + 'in a warm, gentle, and emotionally close female whisper, designed to be comforting and soothing, perfect for relaxation or sleep.';
-            break;
-
-        case 'Motivational & Deep':
-            const motivationalPreamble = 'The voice should have a cinematic and professional quality. ';
-            if (nameLower.includes('deep') || nameLower.includes('epic') || nameLower.includes('powerful')) mainInstruction = motivationalPreamble + 'in a powerful, deep, resonant, and cinematic male voice with a strong chest resonance, suitable for a movie trailer or an epic motivational speech. The delivery must be confident and inspiring.';
-            else if (nameLower.includes('calm') || nameLower.includes('therapist') || nameLower.includes('guide')) mainInstruction = motivationalPreamble + 'in a calm, gentle, slow, and deeply motivating voice for guidance or therapy, with exceptionally clear articulation and a reassuring, empathetic tone.';
-            else if (nameLower.includes('wise man')) mainInstruction = motivationalPreamble + 'in a deep, slow, and resonant elderly male voice, full of wisdom and gravitas. The pacing is deliberate and thoughtful.';
-            else mainInstruction = motivationalPreamble + 'in a strong, clear, and inspirational motivational voice with steady pacing and emotional depth, designed to uplift the listener.';
-            break;
-            
-        case 'Accents':
-             mainInstruction = `speaking clearly and naturally with a ${settings.accent.replace('EN', 'English')} accent`;
-            break;
+    } else if (category === 'Background Horror') {
+        const bgHorror = `Generate a soundscape-like vocal performance ${atmosphereInstruction}`;
+        if (nameLower.includes('poltergeist')) mainInstruction = bgHorror + 'of a noisy poltergeist: vocal fry, sudden shifts, echoing.';
+        else if (nameLower.includes('cult')) mainInstruction = bgHorror + 'of a low, monotonic, rhythmic cult chant.';
+        else if (nameLower.includes('demon')) mainInstruction = bgHorror + 'of a basement demon: low pitch, guttural, growling.';
+        else mainInstruction = bgHorror + 'that is ambient and scary.';
         
-        case 'Relaxation':
-            mainInstruction = `in a very calm, soothing, and deeply relaxing voice for meditation or sleep stories, with a slow, gentle rhythm and soft tone. Emphasize long, peaceful pauses.`;
-            break;
+    } else if (category === 'Ultra-Horror') {
+        const horror = `Sound-designed horror voice ${atmosphereInstruction}. `;
+        if (nameLower.includes('demonic')) mainInstruction = horror + 'Deep, layered, distorted demon voice with low harmonics and growls.';
+        else if (nameLower.includes('witch')) mainInstruction = horror + 'High-pitched, cackling, sinister witch voice.';
+        else if (nameLower.includes('ghost')) mainInstruction = horror + 'Ethereal, airy, cold ghost voice with echo.';
+        else mainInstruction = horror + 'Creepy, slow, suspenseful narrator.';
 
-        default:
-            // Fallback for general categories using the vibe
-            switch (vibe) {
-                case 'Smooth Jazz DJ': mainInstruction = 'in the cool, velvety style of a late-night smooth jazz DJ'; break;
-                case 'News Anchor': mainInstruction = 'in the clear, authoritative, and professional style of a news anchor'; break;
-                case 'Calm Therapist': mainInstruction = 'in a calm, reassuring, and therapeutic voice'; break;
-                case 'Horror Narrator': mainInstruction = 'in a scary, suspenseful horror narrator voice'; break;
-                case 'Fairytale Teller': mainInstruction = 'in a gentle, warm, and magical fairytale storyteller voice'; break;
-                case 'Action Narrator': mainInstruction = 'in an exciting, fast-paced action movie narrator voice'; break;
-                case 'Bedtime Story': mainInstruction = 'in a very soothing, soft, and gentle bedtime story voice'; break;
-                default: mainInstruction = `in a ${vibe.toLowerCase()} voice`; break;
-            }
-            break;
+    } else if (category === 'Soft Intimate Whisper') {
+        const asmr = `Close-mic ASMR whisper ${atmosphereInstruction}. `;
+        if (nameLower.includes('soft girl')) mainInstruction = asmr + 'Extremely soft, breathy, airy female whisper.';
+        else if (nameLower.includes('deep')) mainInstruction = asmr + 'Deep, resonant, smooth whisper.';
+        else mainInstruction = asmr + 'Warm, gentle, comforting whisper.';
+
+    } else if (category === 'Motivational & Deep') {
+        if (nameLower.includes('deep') || nameLower.includes('epic')) mainInstruction = `Powerful, deep, resonant, cinematic male voice ${atmosphereInstruction}.`;
+        else mainInstruction = `Calm, reassuring, professional motivational voice ${atmosphereInstruction}.`;
+
+    } else if (settings.accent === 'Transatlantic (1920s)') {
+        mainInstruction = `Speak with a fast, clipped, sharp 1920s Transatlantic radio announcer accent. ${atmosphereInstruction}`;
+
+    } else if (settings.accent === 'Nature Documentary') {
+        mainInstruction = `Speak in a breathy, hushed, reverent, and highly articulate British accent, exactly like David Attenborough observing nature. ${atmosphereInstruction}`;
+
+    } else if (vibe === 'Cybernetic' || settings.accent === 'Robotic Filter') {
+        mainInstruction = `Speak in a precise, staccato, slightly metallic and emotionless cybernetic tone. ${atmosphereInstruction}`;
+
+    } else {
+        // General fallback
+        mainInstruction = `Speak in a ${vibe.toLowerCase()} tone as ${name}. ${atmosphereInstruction}`;
+        if (settings.accent && settings.accent !== 'Neutral EN') {
+            mainInstruction += ` Use a ${settings.accent} accent.`;
+        }
     }
     
-    // Final prompt structure: "Say [modifier]: [script]"
-    return `Say ${mainInstruction}: ${script}`;
+    // Put instructions FIRST to ensure they are processed as context, not content.
+    return `Voice Style Instruction: ${mainInstruction}\n\nContent to read: "${script}"`;
 }
 
 
 export async function generateSpeech(
     script: string,
     profile: VoiceProfile
-): Promise<string | null> {
+): Promise<string> {
     const fullPrompt = constructPrompt(script, profile);
     
-    try {
+    // INTELLIGENT GENDER & MODEL SELECTION
+    let selectedVoice = 'Kore'; // Default Female
+    
+    const descriptionLower = profile.description.toLowerCase();
+    const nameLower = profile.name.toLowerCase();
+    
+    // Keywords that strongly suggest a male voice
+    const isMale = /\b(male|man|boy|guy|brother|father|king|wizard|pirate|lord|sir|actor|hero|soldier|monk|narrator|detective|general|chef|baritone|chest voice|attenborough|philosopher|gangster|cyborg|warlord|gentleman)\b/.test(descriptionLower) || 
+                   /\b(male|man|boy|guy|mr|david|arthur|chris|callum|daniel)\b/.test(nameLower);
+
+    // Keywords that strongly suggest a deep/rough male voice
+    const isDeepMale = /\b(deep|gruff|powerful|low|rough|monster|demon|giant|viking|god|sage|ancient|warlord)\b/.test(descriptionLower);
+    
+    // Keywords for specific rough male archetypes
+    const isRoughMale = /\b(orc|growl|distorted|cybernetic|robot|glitch)\b/.test(descriptionLower);
+
+
+    if (profile.category === 'Quranic Recitation') {
+        selectedVoice = 'Charon'; // Best for Recitation
+    } else if (profile.category === 'Background Horror' || profile.category === 'Ultra-Horror') {
+         if (nameLower.includes('witch') || nameLower.includes('girl') || nameLower.includes('woman')) {
+             selectedVoice = 'Kore';
+         } else if (nameLower.includes('demon') || nameLower.includes('monster') || nameLower.includes('growl')) {
+             selectedVoice = 'Fenrir';
+         } else {
+             selectedVoice = 'Charon';
+         }
+    } else if (isRoughMale) {
+        selectedVoice = 'Fenrir';
+    } else if (isMale) {
+        selectedVoice = isDeepMale ? 'Charon' : 'Puck';
+    }
+
+    const callApi = async () => {
+        // Using the dedicated TTS model
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash-preview-tts",
             contents: [{ parts: [{ text: fullPrompt }] }],
             config: {
-                responseModalities: [Modality.AUDIO],
+                responseModalities: ['AUDIO'],
                 speechConfig: {
-                    // NOTE: The TTS API doesn't support all the detailed settings from the UI directly.
-                    // We use pre-built voices. The intelligent prompt engineering above is the primary
-                    // method for guiding the model's performance and achieving the desired voice style.
                     voiceConfig: {
-                        // Using a consistent, high-quality female voice as a versatile base.
-                        // The prompt instructions will shape its performance.
-                        prebuiltVoiceConfig: { voiceName: 'Kore' }, 
+                        prebuiltVoiceConfig: { voiceName: selectedVoice }, 
                     },
                 },
+                // CRITICAL: Relax safety settings for Horror/Thriller/Creative content
+                safetySettings: [
+                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+                ],
             },
         });
 
         const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-        return base64Audio ?? null;
-
-    } catch (error) {
-        console.error("Error calling Gemini API:", error);
-        // Provide a more user-friendly error message
-        if (error instanceof Error && error.message.includes('SAFETY')) {
-             throw new Error("Generation failed due to safety filters. Please modify the script and try again.");
+        
+        // Check if we got a refusal (text instead of audio)
+        const textPart = response.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!base64Audio && textPart) {
+            console.error("Model refused generation:", textPart);
+            throw new Error(`Model Refusal: ${textPart}`);
         }
-        throw new Error("Failed to generate speech. The model may be unavailable or the request was blocked.");
+
+        if (!base64Audio) {
+             throw new Error("Gemini API returned no audio data. The request might have been blocked by safety filters.");
+        }
+
+        return base64Audio;
+    };
+
+    try {
+        return await retryOperation(callApi);
+    } catch (error: any) {
+        console.error("Error calling Gemini API:", error);
+        if (error.message && error.message.includes('SAFETY')) {
+             throw new Error("Safety Block: Please adjust the script or settings.");
+        }
+        if (error.message && error.message.includes('Refusal')) {
+            throw new Error(error.message);
+        }
+        throw new Error(`Generation Failed: ${error.message || "Unknown error"}`);
     }
+}
+
+// --- Chatbot Capability ---
+
+export function createChatSession(): Chat {
+    return ai.chats.create({
+        model: 'gemini-2.5-flash',
+        config: {
+            systemInstruction: "You are VoiceGen Assistant, an expert in audio synthesis. Help users write scripts, choose voice settings, and debug audio issues. Keep answers concise.",
+        }
+    });
 }

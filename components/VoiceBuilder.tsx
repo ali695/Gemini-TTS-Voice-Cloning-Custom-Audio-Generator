@@ -1,11 +1,11 @@
+
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 import type { VoiceProfile, Vibe } from '../types';
-import { CloseIcon } from './icons/CloseIcon';
 import { ChevronDownIcon } from './icons/ChevronDownIcon';
 import { SaveIcon } from './icons/SaveIcon';
-import { InformationCircleIcon } from './icons/InformationCircleIcon';
 import { ExclamationTriangleIcon } from './icons/ExclamationTriangleIcon';
 import { DeleteIcon } from './icons/DeleteIcon';
+import { CheckCircleIcon } from './icons/CheckCircleIcon';
 
 interface VoiceBuilderProps {
     profile: VoiceProfile;
@@ -17,19 +17,16 @@ const VIBES: Vibe[] = [
     'Friendly', 'Sincere', 'Dramatic', 'Emotional', 'Motivational', 'Whispering', 
     'Soft ASMR', 'Documentary', 'News Anchor', 'Calm Therapist', 'Smooth Jazz DJ',
     'Horror Narrator', 'Fairytale Teller', 'Action Narrator', 'Bedtime Story',
-    'Villain', 'Pirate',
+    'Villain', 'Pirate', 'Terrified', 'Demonic', 'Eerie', 'Ghostly', 'Poltergeist',
+    'Islamic Recitation', 'Spiritual', 'Murattal',
+    'Philosophical', 'Cybernetic', 'Divine', 'Hysterical', 'Grumpy',
+    'Hypnotic', 'Sleep Learning'
 ];
 
 const UploadIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3.75 3.75M12 9.75L8.25 13.5" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 17.25v2.25c0 1.518 1.232 2.75 2.75 2.75h13.5A2.75 2.75 0 0021 19.5V17.25" />
-    </svg>
-);
-
-const CheckCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
 );
 
@@ -41,16 +38,20 @@ const AudioFileIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 
 
 const FineTuneSlider: React.FC<{ id: string; label: string; value: number; min: number; max: number; step: number; onChange: (value: number) => void }> = ({ id, label, value, min, max, step, onChange }) => (
-    <div className="mb-6">
-        <div className="flex justify-between items-center mb-2">
-            <label htmlFor={id} className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</label>
-            <span className="font-mono text-xs text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded">{label === 'Estimated Age' ? Math.round(value) : value.toFixed(2)}</span>
+    <div className="mb-6 group">
+        <div className="flex justify-between items-center mb-3">
+            <label htmlFor={id} className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{label}</label>
+            <span className="font-mono text-[10px] font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-white/10 px-2.5 py-1 rounded-md tabular-nums min-w-[36px] text-center">
+                {label === 'Estimated Age' ? Math.round(value) : value.toFixed(2)}
+            </span>
         </div>
-        <input
-            id={id}
-            type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(parseFloat(e.target.value))}
-            className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600 dark:accent-cyan-400"
-        />
+        <div className="relative h-6 flex items-center">
+            <input
+                id={id}
+                type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(parseFloat(e.target.value))}
+                className="w-full accent-indigo-600 dark:accent-indigo-400 cursor-pointer"
+            />
+        </div>
     </div>
 );
 
@@ -58,6 +59,7 @@ const FineTuneSlider: React.FC<{ id: string; label: string; value: number; min: 
 export const VoiceBuilder: React.FC<VoiceBuilderProps> = ({ profile, onUpdate, addLog }) => {
     const [localDescription, setLocalDescription] = useState(profile.description);
     const [localVibe, setLocalVibe] = useState(profile.vibe);
+    const [localBreathingLevel, setLocalBreathingLevel] = useState(profile.settings.breathingLevel ?? 0.1);
     const [isSaved, setIsSaved] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
@@ -93,6 +95,7 @@ export const VoiceBuilder: React.FC<VoiceBuilderProps> = ({ profile, onUpdate, a
     
     useEffect(() => {
         setLocalDescription(profile.description); setLocalVibe(profile.vibe);
+        setLocalBreathingLevel(profile.settings.breathingLevel ?? 0.1);
         setIsUploading(false); setUploadProgress(0);
         if (!profile.audioSampleUrl) { setFileAnalysis(null); if (fileInputRef.current) fileInputRef.current.value = ''; } 
         else { setFileAnalysis({ quality: 'Good', duration: null, warnings: [], fileName: profile.audioSampleUrl }); }
@@ -104,8 +107,24 @@ export const VoiceBuilder: React.FC<VoiceBuilderProps> = ({ profile, onUpdate, a
         document.addEventListener('mousedown', handleClickOutside); return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleSave = () => { onUpdate(profile.id, { description: localDescription, vibe: localVibe }); setIsSaved(true); addLog(`Saved changes to "${profile.name}"`); };
-    const hasUnsavedChanges = localDescription !== profile.description || localVibe !== profile.vibe;
+    const handleSave = () => { 
+        onUpdate(profile.id, { 
+            description: localDescription, 
+            vibe: localVibe,
+            settings: {
+                ...profile.settings,
+                breathingLevel: localBreathingLevel
+            }
+        }); 
+        setIsSaved(true); 
+        addLog(`Saved changes to "${profile.name}"`); 
+    };
+    
+    const hasUnsavedChanges = 
+        localDescription !== profile.description || 
+        localVibe !== profile.vibe ||
+        localBreathingLevel !== (profile.settings.breathingLevel ?? 0.1);
+
     const handleVibeChange = (newVibe: Vibe) => { setLocalVibe(newVibe); setIsVibeOpen(false); };
     
     const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,7 +133,6 @@ export const VoiceBuilder: React.FC<VoiceBuilderProps> = ({ profile, onUpdate, a
             if (file.size / 1024 / 1024 > 50) { addLog('Error: File size should not exceed 50MB.'); e.target.value = ''; return; }
             setIsUploading(true); setUploadProgress(0); setFileAnalysis(null);
             
-            // Simulate upload progress
             const steps = 20;
             for(let i = 0; i <= steps; i++) {
                  setUploadProgress(i * (100/steps));
@@ -135,71 +153,90 @@ export const VoiceBuilder: React.FC<VoiceBuilderProps> = ({ profile, onUpdate, a
         <div className="p-6 space-y-8 overflow-y-auto h-full custom-scrollbar">
             <div>
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Voice Profile Builder</h2>
+                    <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Voice Builder</h2>
                     <button onClick={handleSave} disabled={!hasUnsavedChanges || isSaved} 
                         aria-label={isSaved ? 'Changes saved successfully' : 'Save changes to voice profile'}
-                        className={`flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all duration-200 shadow-sm border
+                        className={`flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-wide rounded-xl transition-all duration-200 border
                         ${isSaved 
-                            ? 'bg-green-500 text-white border-green-500' 
+                            ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800' 
                             : hasUnsavedChanges 
-                                ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-500 hover:shadow-md hover:-translate-y-0.5' 
-                                : 'bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-white/10 cursor-not-allowed'
+                                ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-500 shadow-sm active:scale-95' 
+                                : 'bg-slate-50 dark:bg-white/5 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-white/10 cursor-not-allowed'
                         }`}>
                         {isSaved ? <CheckCircleIcon className="w-3.5 h-3.5" /> : <SaveIcon className="w-3.5 h-3.5" />}
-                        <span>{isSaved ? 'Saved' : 'Save Changes'}</span>
+                        <span>{isSaved ? 'Saved' : 'Save'}</span>
                     </button>
                 </div>
-                <label htmlFor="voice-description" className="block text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">Description</label>
-                <textarea id="voice-description" rows={3} className="w-full bg-white dark:bg-black/20 rounded-xl border border-slate-200 dark:border-white/10 focus:ring-2 focus:ring-blue-500 dark:focus:ring-cyan-400/50 focus:border-blue-500 dark:focus:border-cyan-400 transition-all text-sm p-4 shadow-sm placeholder:text-slate-400 resize-none" placeholder="E.g., A deep, calm male monk for meditation guides" value={localDescription} onChange={(e) => setLocalDescription(e.target.value)} />
+                
+                <label htmlFor="voice-description" className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-3">Description</label>
+                <textarea 
+                    id="voice-description" 
+                    rows={3} 
+                    className="w-full bg-slate-50 dark:bg-black/20 rounded-xl border border-slate-200 dark:border-white/10 focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-400/20 focus:border-indigo-500 dark:focus:border-indigo-400 transition-all text-sm p-4 placeholder:text-slate-400 resize-none text-slate-700 dark:text-slate-200 leading-relaxed font-medium" 
+                    placeholder="E.g., A deep, calm male monk for meditation guides" 
+                    value={localDescription} 
+                    onChange={(e) => setLocalDescription(e.target.value)} 
+                />
             </div>
 
             <div className="relative" ref={vibeMenuRef}>
-                <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">Personality / Vibe</h3>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-3">Personality / Vibe</label>
                 <button 
                     onClick={() => setIsVibeOpen(p => !p)} 
-                    className="w-full flex justify-between items-center bg-white dark:bg-black/20 rounded-xl border border-slate-200 dark:border-white/10 p-3.5 transition-all duration-200 shadow-sm hover:border-blue-400 dark:hover:border-cyan-500/50"
+                    className="w-full flex justify-between items-center bg-slate-50 dark:bg-black/20 rounded-xl border border-slate-200 dark:border-white/10 p-3.5 transition-all duration-200 hover:border-indigo-300 dark:hover:border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-400/20"
                     aria-haspopup="true"
                     aria-expanded={isVibeOpen}
                 >
-                    <span className="font-semibold text-sm text-slate-800 dark:text-slate-200">{localVibe}</span>
+                    <span className="font-semibold text-sm text-slate-700 dark:text-slate-200">{localVibe}</span>
                     <ChevronDownIcon className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isVibeOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {isVibeOpen && (
-                    <div className="absolute top-full mt-2 w-full max-h-60 overflow-y-auto bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-2 z-20 animate-fade-in custom-scrollbar">
-                        {VIBES.map(vibe => (<button key={vibe} onClick={() => handleVibeChange(vibe)} className={`w-full text-left px-4 py-2.5 text-sm transition-colors relative group ${localVibe === vibe ? 'bg-blue-50 dark:bg-white/5 text-blue-600 dark:text-cyan-400 font-bold' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'}`}>
-                           {localVibe === vibe && <div className="absolute left-0 inset-y-0 w-1 bg-blue-500 dark:bg-cyan-400 rounded-r"></div>}
+                    <div className="absolute top-full mt-2 w-full max-h-56 overflow-y-auto bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1.5 z-20 animate-fade-in custom-scrollbar">
+                        {VIBES.map(vibe => (<button key={vibe} onClick={() => handleVibeChange(vibe)} className={`w-full text-left px-4 py-2.5 text-xs font-semibold transition-colors ${localVibe === vibe ? 'bg-indigo-50 dark:bg-white/5 text-indigo-600 dark:text-indigo-400' : 'hover:bg-slate-50 dark:hover:bg-white/5 text-slate-600 dark:text-slate-300'}`}>
                            <span>{vibe}</span>
                         </button>))}
                     </div>
                 )}
             </div>
 
+            <div className="pt-2">
+                 <FineTuneSlider
+                    id="breathing-level"
+                    label="Breathing Level"
+                    value={localBreathingLevel}
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    onChange={setLocalBreathingLevel}
+                />
+            </div>
+
             <div>
-                <div className="flex items-center justify-between mb-3">
-                     <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Voice Cloning Source</h3>
-                     <span className="text-[10px] uppercase tracking-wider font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 px-2 py-0.5 rounded-md shadow-sm">PRO</span>
+                <div className="flex items-center justify-between mb-4">
+                     <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Voice Cloning</h3>
+                     <span className="text-[9px] uppercase tracking-wider font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/30 px-2 py-0.5 rounded-full">Pro Feature</span>
                 </div>
                
                 {!isFileActive && !isUploading && (
-                    <label htmlFor="audio-upload" className="group cursor-pointer p-10 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-cyan-400 bg-slate-50/50 dark:bg-white/5 hover:bg-blue-50/30 dark:hover:bg-cyan-900/10 rounded-2xl text-center transition-all duration-300 flex flex-col items-center justify-center">
-                        <div className="p-4 rounded-full bg-white dark:bg-slate-800 shadow-sm mb-4 group-hover:scale-110 group-hover:shadow-md transition-all duration-300">
-                            <UploadIcon className="w-8 h-8 text-slate-400 group-hover:text-blue-500 dark:group-hover:text-cyan-400 transition-colors" />
+                    <label htmlFor="audio-upload" className="group cursor-pointer p-8 border border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 bg-slate-50/50 dark:bg-white/5 hover:bg-indigo-50/20 dark:hover:bg-indigo-900/10 rounded-2xl text-center transition-all duration-300 flex flex-col items-center justify-center min-h-[160px]">
+                        <div className="p-4 rounded-full bg-white dark:bg-slate-800 shadow-sm mb-4 group-hover:scale-110 group-hover:shadow-md transition-all duration-300 text-slate-400 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 border border-slate-100 dark:border-white/5">
+                            <UploadIcon className="w-6 h-6" />
                         </div>
-                        <p className="text-base font-bold text-slate-900 dark:text-white mb-1">Click to upload audio</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">WAV, MP3, FLAC (Max 50MB)</p>
+                        <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Click to upload audio</p>
+                        <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 mt-1.5 uppercase tracking-wide">WAV, MP3, FLAC (Max 50MB)</p>
                         <input ref={fileInputRef} type="file" id="audio-upload" className="hidden" accept=".mp3,.wav,.ogg,.m4a,.flac,.aac" onChange={handleFileUpload} />
                     </label>
                 )}
                 
                 {isUploading && (
-                    <div className="p-6 border border-blue-100 dark:border-cyan-900/30 bg-white dark:bg-slate-800 rounded-2xl shadow-sm animate-fade-in">
-                        <div className="flex justify-between items-center mb-3">
-                            <span className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Uploading & Analyzing...</span>
-                            <span className="text-xs font-mono font-bold text-blue-600 dark:text-cyan-400">{Math.round(uploadProgress)}%</span>
+                    <div className="p-6 border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 rounded-2xl animate-fade-in">
+                        <div className="flex justify-between items-center mb-4">
+                            <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Processing Audio...</span>
+                            <span className="text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400">{Math.round(uploadProgress)}%</span>
                         </div>
-                        <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
+                        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
                             <div 
-                                className="bg-gradient-to-r from-blue-500 to-cyan-400 h-full rounded-full relative" 
+                                className="bg-indigo-500 dark:bg-indigo-400 h-full rounded-full relative" 
                                 style={{ width: `${uploadProgress}%`, transition: 'width 0.1s ease-out' }}
                             >
                                 <div className="absolute inset-0 bg-white/30 animate-[shine_1.5s_infinite] skew-x-12"></div>
@@ -210,45 +247,39 @@ export const VoiceBuilder: React.FC<VoiceBuilderProps> = ({ profile, onUpdate, a
 
                 {isFileActive && fileAnalysis && (
                     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm animate-fade-in group">
-                        <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 dark:bg-black/20">
+                        <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 dark:bg-white/5">
                             <div className="flex items-center gap-4 overflow-hidden">
-                                <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0">
-                                    <AudioFileIcon className="w-6 h-6" />
+                                <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center flex-shrink-0 border border-indigo-100 dark:border-indigo-800/30">
+                                    <AudioFileIcon className="w-5 h-5" />
                                 </div>
                                 <div className="min-w-0">
-                                    <h4 className="font-bold text-slate-800 dark:text-white text-sm truncate" title={fileAnalysis.fileName}>{fileAnalysis.fileName}</h4>
-                                    <div className="flex items-center gap-1.5 mt-1">
-                                        <span className="relative flex h-2 w-2">
-                                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                                        </span>
-                                        <span className="text-[10px] uppercase font-bold tracking-wider text-green-600 dark:text-green-400">Ready for Cloning</span>
-                                    </div>
+                                    <h4 className="font-semibold text-slate-800 dark:text-white text-sm truncate max-w-[150px]" title={fileAnalysis.fileName}>{fileAnalysis.fileName}</h4>
+                                    <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-600 dark:text-emerald-400 block mt-0.5">Ready for Synthesis</span>
                                 </div>
                             </div>
                             
                             <button 
                                 onClick={handleRemoveFile}
-                                className="px-3 py-1.5 flex items-center gap-2 text-xs font-bold uppercase text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-800/50"
+                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                title="Remove File"
                             >
-                                <span>Remove File</span>
-                                <DeleteIcon className="w-3.5 h-3.5" />
+                                <DeleteIcon className="w-4 h-4" />
                             </button>
                         </div>
 
                         <div className="grid grid-cols-2 divide-x divide-slate-100 dark:divide-slate-700">
-                            <div className="p-4 flex flex-col items-center justify-center text-center hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
-                                <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider mb-1">Audio Quality</span>
-                                <div className={`text-base font-black tracking-tight ${
+                            <div className="p-3 flex flex-col items-center justify-center text-center">
+                                <span className="text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider mb-1">Signal Quality</span>
+                                <div className={`text-sm font-bold ${
                                     fileAnalysis.quality === 'Excellent' ? 'text-emerald-500' : 
                                     fileAnalysis.quality === 'Good' ? 'text-blue-500' : 'text-amber-500'
                                 }`}>
                                     {fileAnalysis.quality}
                                 </div>
                             </div>
-                            <div className="p-4 flex flex-col items-center justify-center text-center hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
-                                <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider mb-1">Duration</span>
-                                <div className="text-base font-black tracking-tight text-slate-700 dark:text-slate-200 font-mono">
+                            <div className="p-3 flex flex-col items-center justify-center text-center">
+                                <span className="text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider mb-1">Duration</span>
+                                <div className="text-sm font-bold text-slate-700 dark:text-slate-200 font-mono">
                                     {fileAnalysis.duration ? `${fileAnalysis.duration.toFixed(1)}s` : 'N/A'}
                                 </div>
                             </div>
@@ -257,8 +288,8 @@ export const VoiceBuilder: React.FC<VoiceBuilderProps> = ({ profile, onUpdate, a
                         {fileAnalysis.warnings.length > 0 && (
                             <div className="p-3 bg-amber-50 dark:bg-amber-900/10 border-t border-amber-100 dark:border-amber-900/20">
                                 {fileAnalysis.warnings.map((w, i) => (
-                                    <div key={i} className="flex items-start gap-2 text-xs font-medium text-amber-700 dark:text-amber-400">
-                                        <ExclamationTriangleIcon className="w-4 h-4 flex-shrink-0" />
+                                    <div key={i} className="flex items-start gap-2 text-[10px] font-medium text-amber-700 dark:text-amber-400 leading-tight">
+                                        <ExclamationTriangleIcon className="w-3.5 h-3.5 flex-shrink-0" />
                                         <span>{w}</span>
                                     </div>
                                 ))}
@@ -269,11 +300,8 @@ export const VoiceBuilder: React.FC<VoiceBuilderProps> = ({ profile, onUpdate, a
             </div>
 
             {isFileActive && (
-                <div className="pt-6 mt-6 border-t border-slate-200 dark:border-white/5 animate-fade-in">
-                    <h4 className="text-xs font-bold uppercase tracking-wide text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-                        Fine-Tune Clone
-                        <div className="h-px bg-slate-200 dark:bg-white/10 flex-grow"></div>
-                    </h4>
+                <div className="pt-6 mt-2 border-t border-slate-100 dark:border-white/5 animate-fade-in">
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-6">Fine-Tune Clone</h4>
                     <FineTuneSlider id="timbre-slider" label="Timbre Match" value={cloneSettings.timbre} min={0} max={1} step={0.05} onChange={v => setCloneSettings(s => ({...s, timbre: v}))} />
                     <FineTuneSlider id="accent-slider" label="Accent Strength" value={cloneSettings.accent} min={0} max={1} step={0.05} onChange={v => setCloneSettings(s => ({...s, accent: v}))} />
                     <FineTuneSlider id="age-slider" label="Estimated Age" value={cloneSettings.age} min={10} max={80} step={1} onChange={v => setCloneSettings(s => ({...s, age: v}))} />
