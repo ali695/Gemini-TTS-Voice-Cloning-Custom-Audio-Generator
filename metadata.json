@@ -3,5 +3,6 @@
   "description": "An advanced AI-powered application for generating realistic, custom voices from text prompts. Features a voice builder, personality presets, voice cloning capabilities, and a full script editor with live previews and multiple export formats.",
   "requestFramePermissions": [
     "microphone"
-  ]
+  ],
+  "majorCapabilities": []
 }
